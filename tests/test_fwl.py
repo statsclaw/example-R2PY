@@ -39,9 +39,7 @@ class TestF1SingleFEDemeaning:
             "linear", data, "Y", "D", "X",
             FE=["group"], method="linear", vartype="delta",
         )
-        # The model should fit without error
         assert result is not None
-        # Check use_fe flag
         assert result.use_fe is True
 
 
@@ -101,20 +99,17 @@ class TestF3FWLOLSEquivalence:
             Z=z_cols, method="linear", vartype="delta",
         )
 
-        # Compare TE at evaluation points
+        # Compare TE at evaluation points (numpy arrays, not DataFrames)
         key_fwl = list(result_fwl.est_lin.keys())[0]
         key_lsdv = list(result_lsdv.est_lin.keys())[0]
-        te_fwl = result_fwl.est_lin[key_fwl].iloc[:, 1].values
-        te_lsdv = result_lsdv.est_lin[key_lsdv].iloc[:, 1].values
+        te_fwl = result_fwl.est_lin[key_fwl][:, 1]
+        te_lsdv = result_lsdv.est_lin[key_lsdv][:, 1]
 
-        # They should have the same length (same eval grid)
         min_len = min(len(te_fwl), len(te_lsdv))
         if min_len > 0:
-            # Compare at matching x values
-            x_fwl = result_fwl.est_lin[key_fwl].iloc[:, 0].values
-            x_lsdv = result_lsdv.est_lin[key_lsdv].iloc[:, 0].values
+            x_fwl = result_fwl.est_lin[key_fwl][:, 0]
+            x_lsdv = result_lsdv.est_lin[key_lsdv][:, 0]
             for i in range(min_len):
-                # Only compare at points that exist in both grids
                 closest_idx = np.argmin(np.abs(x_lsdv - x_fwl[i]))
                 if abs(x_lsdv[closest_idx] - x_fwl[i]) < 0.01:
                     diff = abs(te_fwl[i] - te_lsdv[closest_idx])
@@ -133,7 +128,6 @@ class TestF4IVFWL:
     def test_iv_produces_results(self):
         """IV estimation should produce finite results."""
         data = make_iv_data(n=500, seed=42)
-        # Add a group variable for FE
         rng = np.random.default_rng(99)
         data["group"] = rng.choice(5, len(data))
 
@@ -146,5 +140,4 @@ class TestF4IVFWL:
         keys = list(result.est_lin.keys())
         assert len(keys) >= 1
         te_table = result.est_lin[keys[0]]
-        # Residuals should have correct dimension
         assert te_table.shape[0] > 0

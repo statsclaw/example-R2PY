@@ -36,8 +36,8 @@ class TestN2LinearContinuousME:
         keys = list(self.result.est_lin.keys())
         assert len(keys) >= 1
         te_table = self.result.est_lin[keys[0]]
-        x_vals = te_table.iloc[:, 0].values
-        te_vals = te_table.iloc[:, 1].values
+        x_vals = te_table[:, 0]
+        te_vals = te_table[:, 1]
         idx_0 = np.argmin(np.abs(x_vals - 0.0))
         me_at_0 = te_vals[idx_0]
         assert abs(me_at_0 - 0.8) < self.TOLERANCE, (
@@ -48,8 +48,8 @@ class TestN2LinearContinuousME:
         """ME at x=1 should be ~1.4 (true: 0.8 + 0.6*1)."""
         keys = list(self.result.est_lin.keys())
         te_table = self.result.est_lin[keys[0]]
-        x_vals = te_table.iloc[:, 0].values
-        te_vals = te_table.iloc[:, 1].values
+        x_vals = te_table[:, 0]
+        te_vals = te_table[:, 1]
         idx_1 = np.argmin(np.abs(x_vals - 1.0))
         me_at_1 = te_vals[idx_1]
         assert abs(me_at_1 - 1.4) < self.TOLERANCE, (
@@ -60,9 +60,8 @@ class TestN2LinearContinuousME:
         """ME should be linear in x (R-squared > 0.9999)."""
         keys = list(self.result.est_lin.keys())
         te_table = self.result.est_lin[keys[0]]
-        x_vals = te_table.iloc[:, 0].values
-        te_vals = te_table.iloc[:, 1].values
-        # Fit line: TE = a + b*x
+        x_vals = te_table[:, 0]
+        te_vals = te_table[:, 1]
         coeffs = np.polyfit(x_vals, te_vals, 1)
         te_fitted = np.polyval(coeffs, x_vals)
         ss_res = np.sum((te_vals - te_fitted) ** 2)
@@ -76,5 +75,5 @@ class TestN2LinearContinuousME:
         """All SEs must be positive."""
         keys = list(self.result.est_lin.keys())
         te_table = self.result.est_lin[keys[0]]
-        sd_vals = te_table.iloc[:, 2].values
+        sd_vals = te_table[:, 2]
         assert np.all(sd_vals > 0), "All SEs must be positive"

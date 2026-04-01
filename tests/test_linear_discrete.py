@@ -46,13 +46,11 @@ class TestN1LinearDiscreteCoefficientRecovery:
 
     def test_te_at_x0(self):
         """TE at x=0 should be ~2.0 (true value)."""
-        # Find the treatment arm key (should be "1" with base "0")
         keys = list(self.result.est_lin.keys())
         assert len(keys) >= 1, "Should have at least one treatment arm"
         te_table = self.result.est_lin[keys[0]]
-        # Find evaluation point closest to x=0
-        x_vals = te_table.iloc[:, 0].values  # first column is X
-        te_vals = te_table.iloc[:, 1].values  # second column is TE
+        x_vals = te_table[:, 0]
+        te_vals = te_table[:, 1]
         idx_0 = np.argmin(np.abs(x_vals - 0.0))
         te_at_0 = te_vals[idx_0]
         assert abs(te_at_0 - 2.0) < self.TOLERANCE, (
@@ -64,8 +62,8 @@ class TestN1LinearDiscreteCoefficientRecovery:
         """TE at x=1 should be ~3.5 (true value: 2 + 1.5*1)."""
         keys = list(self.result.est_lin.keys())
         te_table = self.result.est_lin[keys[0]]
-        x_vals = te_table.iloc[:, 0].values
-        te_vals = te_table.iloc[:, 1].values
+        x_vals = te_table[:, 0]
+        te_vals = te_table[:, 1]
         idx_1 = np.argmin(np.abs(x_vals - 1.0))
         te_at_1 = te_vals[idx_1]
         assert abs(te_at_1 - 3.5) < self.TOLERANCE, (
@@ -77,8 +75,8 @@ class TestN1LinearDiscreteCoefficientRecovery:
         """TE should be monotonically increasing (delta_1=1.5 > 0)."""
         keys = list(self.result.est_lin.keys())
         te_table = self.result.est_lin[keys[0]]
-        x_vals = te_table.iloc[:, 0].values
-        te_vals = te_table.iloc[:, 1].values
+        x_vals = te_table[:, 0]
+        te_vals = te_table[:, 1]
         sorted_idx = np.argsort(x_vals)
         te_sorted = te_vals[sorted_idx]
         diffs = np.diff(te_sorted)
@@ -90,7 +88,7 @@ class TestN1LinearDiscreteCoefficientRecovery:
         """All SEs must be positive and finite."""
         keys = list(self.result.est_lin.keys())
         te_table = self.result.est_lin[keys[0]]
-        sd_vals = te_table.iloc[:, 2].values  # third column is sd
+        sd_vals = te_table[:, 2]
         assert np.all(sd_vals > 0), "All SEs must be positive"
         assert np.all(np.isfinite(sd_vals)), "All SEs must be finite"
 
@@ -98,10 +96,10 @@ class TestN1LinearDiscreteCoefficientRecovery:
         """95% CI at x=0 should contain true TE=2.0."""
         keys = list(self.result.est_lin.keys())
         te_table = self.result.est_lin[keys[0]]
-        x_vals = te_table.iloc[:, 0].values
+        x_vals = te_table[:, 0]
         idx_0 = np.argmin(np.abs(x_vals - 0.0))
-        lower = te_table.iloc[idx_0, 3]  # lower CI
-        upper = te_table.iloc[idx_0, 4]  # upper CI
+        lower = te_table[idx_0, 3]
+        upper = te_table[idx_0, 4]
         assert lower < 2.0 < upper, (
             f"95% CI [{lower:.4f}, {upper:.4f}] should contain true TE=2.0"
         )
@@ -133,8 +131,8 @@ class TestN3FixedEffects:
         """TE at x=0 should be ~2.0."""
         keys = list(self.result.est_lin.keys())
         te_table = self.result.est_lin[keys[0]]
-        x_vals = te_table.iloc[:, 0].values
-        te_vals = te_table.iloc[:, 1].values
+        x_vals = te_table[:, 0]
+        te_vals = te_table[:, 1]
         idx_0 = np.argmin(np.abs(x_vals - 0.0))
         te_at_0 = te_vals[idx_0]
         assert abs(te_at_0 - 2.0) < self.TOLERANCE, (
@@ -145,8 +143,8 @@ class TestN3FixedEffects:
         """TE at x=1 should be ~3.5."""
         keys = list(self.result.est_lin.keys())
         te_table = self.result.est_lin[keys[0]]
-        x_vals = te_table.iloc[:, 0].values
-        te_vals = te_table.iloc[:, 1].values
+        x_vals = te_table[:, 0]
+        te_vals = te_table[:, 1]
         idx_1 = np.argmin(np.abs(x_vals - 1.0))
         te_at_1 = te_vals[idx_1]
         assert abs(te_at_1 - 3.5) < self.TOLERANCE, (
@@ -191,8 +189,8 @@ class TestN4MultiArmDiscrete:
     def test_te_b_at_x0(self):
         """TE_B at x=0 should be ~1.0."""
         te_table = self.result.est_lin["B"]
-        x_vals = te_table.iloc[:, 0].values
-        te_vals = te_table.iloc[:, 1].values
+        x_vals = te_table[:, 0]
+        te_vals = te_table[:, 1]
         idx_0 = np.argmin(np.abs(x_vals - 0.0))
         te_at_0 = te_vals[idx_0]
         assert abs(te_at_0 - 1.0) < self.TOLERANCE_B, (
@@ -202,8 +200,8 @@ class TestN4MultiArmDiscrete:
     def test_te_c_at_x0(self):
         """TE_C at x=0 should be ~3.0."""
         te_table = self.result.est_lin["C"]
-        x_vals = te_table.iloc[:, 0].values
-        te_vals = te_table.iloc[:, 1].values
+        x_vals = te_table[:, 0]
+        te_vals = te_table[:, 1]
         idx_0 = np.argmin(np.abs(x_vals - 0.0))
         te_at_0 = te_vals[idx_0]
         assert abs(te_at_0 - 3.0) < self.TOLERANCE_C, (
@@ -233,7 +231,7 @@ class TestN5LogitBounds:
     def test_te_bounded(self):
         """All TE values must be in (-1, 1)."""
         for key, te_table in self.result.est_lin.items():
-            te_vals = te_table.iloc[:, 1].values
+            te_vals = te_table[:, 1]
             assert np.all(te_vals > -1.0), (
                 f"Arm {key}: TE values must be > -1"
             )
@@ -244,7 +242,7 @@ class TestN5LogitBounds:
     def test_predictions_bounded(self):
         """All predicted values must be in (0, 1)."""
         for key, pred_table in self.result.pred_lin.items():
-            pred_vals = pred_table.iloc[:, 1].values
+            pred_vals = pred_table[:, 1]
             assert np.all(pred_vals > 0), (
                 f"Arm {key}: predictions must be > 0"
             )
@@ -255,7 +253,7 @@ class TestN5LogitBounds:
     def test_ses_positive(self):
         """SEs must be positive."""
         for key, te_table in self.result.est_lin.items():
-            sd_vals = te_table.iloc[:, 2].values
+            sd_vals = te_table[:, 2]
             assert np.all(sd_vals > 0), f"Arm {key}: SEs must be positive"
 
 
@@ -281,7 +279,7 @@ class TestN6PoissonPredictions:
     def test_predictions_positive(self):
         """All predicted values must be > 0 (exp link)."""
         for key, pred_table in self.result.pred_lin.items():
-            pred_vals = pred_table.iloc[:, 1].values
+            pred_vals = pred_table[:, 1]
             assert np.all(pred_vals > 0), (
                 f"Arm {key}: Poisson predictions must be > 0"
             )
@@ -289,5 +287,5 @@ class TestN6PoissonPredictions:
     def test_ses_positive(self):
         """SEs must be positive."""
         for key, te_table in self.result.est_lin.items():
-            sd_vals = te_table.iloc[:, 2].values
+            sd_vals = te_table[:, 2]
             assert np.all(sd_vals > 0), f"Arm {key}: SEs must be positive"

@@ -38,9 +38,8 @@ class TestV1SimulationVariance:
         """Simulation SDs and delta SDs should agree within factor of 2."""
         key_d = list(self.result_delta.est_lin.keys())[0]
         key_s = list(self.result_simu.est_lin.keys())[0]
-        sd_delta = self.result_delta.est_lin[key_d].iloc[:, 2].values
-        sd_simu = self.result_simu.est_lin[key_s].iloc[:, 2].values
-        # Check ratio
+        sd_delta = self.result_delta.est_lin[key_d][:, 2]
+        sd_simu = self.result_simu.est_lin[key_s][:, 2]
         ratio = sd_simu / sd_delta
         assert np.all(ratio > 1.0 / self.SD_RATIO_TOLERANCE), (
             f"Simu/delta SD ratio too small: min={ratio.min():.4f}"
@@ -53,9 +52,9 @@ class TestV1SimulationVariance:
         """Simulation CIs should satisfy lower < estimate < upper."""
         key = list(self.result_simu.est_lin.keys())[0]
         te_table = self.result_simu.est_lin[key]
-        te = te_table.iloc[:, 1].values
-        lower = te_table.iloc[:, 3].values
-        upper = te_table.iloc[:, 4].values
+        te = te_table[:, 1]
+        lower = te_table[:, 3]
+        upper = te_table[:, 4]
         assert np.all(lower < te), "CI lower must be < TE estimate"
         assert np.all(te < upper), "CI upper must be > TE estimate"
 
@@ -84,7 +83,7 @@ class TestV2BootstrapVariance:
     def test_bootstrap_sd_positive_finite(self):
         """Bootstrap SDs must be positive and finite."""
         key = list(self.result_boot.est_lin.keys())[0]
-        sd = self.result_boot.est_lin[key].iloc[:, 2].values
+        sd = self.result_boot.est_lin[key][:, 2]
         assert np.all(sd > 0), "Bootstrap SDs must be positive"
         assert np.all(np.isfinite(sd)), "Bootstrap SDs must be finite"
 
@@ -92,9 +91,9 @@ class TestV2BootstrapVariance:
         """Bootstrap CIs must contain the point estimate."""
         key = list(self.result_boot.est_lin.keys())[0]
         te_table = self.result_boot.est_lin[key]
-        te = te_table.iloc[:, 1].values
-        lower = te_table.iloc[:, 3].values
-        upper = te_table.iloc[:, 4].values
+        te = te_table[:, 1]
+        lower = te_table[:, 3]
+        upper = te_table[:, 4]
         assert np.all(lower < te), "Bootstrap CI lower must be < estimate"
         assert np.all(te < upper), "Bootstrap CI upper must be > estimate"
 
@@ -102,8 +101,8 @@ class TestV2BootstrapVariance:
         """Bootstrap SDs should be in the same order of magnitude as delta SDs."""
         key_d = list(self.result_delta.est_lin.keys())[0]
         key_b = list(self.result_boot.est_lin.keys())[0]
-        sd_delta = self.result_delta.est_lin[key_d].iloc[:, 2].values
-        sd_boot = self.result_boot.est_lin[key_b].iloc[:, 2].values
+        sd_delta = self.result_delta.est_lin[key_d][:, 2]
+        sd_boot = self.result_boot.est_lin[key_b][:, 2]
         ratio = sd_boot / sd_delta
         assert np.all(ratio > 1.0 / self.SD_RATIO_TOLERANCE), (
             f"Boot/delta SD ratio too small: min={ratio.min():.4f}"
@@ -131,9 +130,8 @@ class TestV3DeltaMethodProperties:
         """SE should generally increase as |x| increases (due to DX term)."""
         keys = list(self.result.est_lin.keys())
         te_table = self.result.est_lin[keys[0]]
-        x_vals = te_table.iloc[:, 0].values
-        sd_vals = te_table.iloc[:, 2].values
-        # SE at extreme |x| should be >= SE near 0 on average
+        x_vals = te_table[:, 0]
+        sd_vals = te_table[:, 2]
         near_zero = np.abs(x_vals) < 0.5
         far_from_zero = np.abs(x_vals) > 1.5
         if np.any(near_zero) and np.any(far_from_zero):
@@ -167,6 +165,6 @@ class TestV4SimulationReproducibility:
         )
         key1 = list(result1.est_lin.keys())[0]
         key2 = list(result2.est_lin.keys())[0]
-        te1 = result1.est_lin[key1].iloc[:, 1].values
-        te2 = result2.est_lin[key2].iloc[:, 1].values
+        te1 = result1.est_lin[key1][:, 1]
+        te2 = result2.est_lin[key2][:, 1]
         np.testing.assert_array_equal(te1, te2, err_msg="Simulation should be reproducible")

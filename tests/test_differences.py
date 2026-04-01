@@ -39,10 +39,11 @@ class TestD1TwoPointDifference:
         keys = list(self.result.diff_estimate.keys())
         if len(keys) > 0:
             diff_info = self.result.diff_estimate[keys[0]]
-            if isinstance(diff_info, dict):
+            # diff_info is a DataFrame with columns like 'diff.estimate', 'sd', etc.
+            if hasattr(diff_info, "iloc"):
+                diff_val = diff_info.iloc[0, 0]  # first row, first col = diff estimate
+            elif isinstance(diff_info, dict):
                 diff_val = diff_info.get("diff", diff_info.get("estimate", None))
-            elif hasattr(diff_info, "iloc"):
-                diff_val = diff_info.iloc[0] if len(diff_info) > 0 else None
             else:
                 diff_val = None
             if diff_val is not None:
@@ -56,9 +57,10 @@ class TestD1TwoPointDifference:
         keys = list(self.result.diff_estimate.keys())
         if len(keys) > 0:
             diff_info = self.result.diff_estimate[keys[0]]
-            if isinstance(diff_info, dict):
-                assert "SD" in diff_info or "sd" in diff_info or "se" in diff_info, (
-                    "Diff should include SD/se"
+            if hasattr(diff_info, "columns"):
+                cols = list(diff_info.columns)
+                assert any("sd" in c.lower() for c in cols), (
+                    f"Diff should include SD column, got columns: {cols}"
                 )
 
 
@@ -87,7 +89,6 @@ class TestD2ThreePointDifference:
         """Three differences: (Q50-Q25, Q75-Q50, Q75-Q25)."""
         assert self.result.diff_estimate is not None
         keys = list(self.result.diff_estimate.keys())
-        # Should have at least one arm with differences
         assert len(keys) >= 1
 
     def test_difference_additivity(self):
@@ -95,15 +96,12 @@ class TestD2ThreePointDifference:
         keys = list(self.result.diff_estimate.keys())
         if len(keys) > 0:
             diff_info = self.result.diff_estimate[keys[0]]
-            # The exact structure depends on implementation
-            # Try to extract the three differences
             if hasattr(diff_info, "shape") and diff_info.shape[0] >= 3:
-                d1 = diff_info.iloc[0, 0] if hasattr(diff_info, "iloc") else diff_info[0]
-                d2 = diff_info.iloc[1, 0] if hasattr(diff_info, "iloc") else diff_info[1]
-                d3 = diff_info.iloc[2, 0] if hasattr(diff_info, "iloc") else diff_info[2]
-                # d3 = d1 + d2 (or similar ordering)
-                # The exact ordering may vary, but one should be the sum of the other two
-                # Check: |d3 - (d1 + d2)| < tol
+                # diff_info is a DataFrame; first column has diff estimates
+                d1 = float(diff_info.iloc[0, 0])
+                d2 = float(diff_info.iloc[1, 0])
+                d3 = float(diff_info.iloc[2, 0])
+                # One of them should be the sum of the other two
                 residual = min(
                     abs(d3 - (d1 + d2)),
                     abs(d1 - (d2 + d3)),

@@ -32,10 +32,10 @@ class TestU1BootstrapUniformCI:
         te_table = self.result.est_lin[keys[0]]
         # Expect 7 columns: X, TE, sd, lower, upper, uniform_lower, uniform_upper
         if te_table.shape[1] >= 7:
-            lower_pw = te_table.iloc[:, 3].values
-            upper_pw = te_table.iloc[:, 4].values
-            lower_uni = te_table.iloc[:, 5].values
-            upper_uni = te_table.iloc[:, 6].values
+            lower_pw = te_table[:, 3]
+            upper_pw = te_table[:, 4]
+            lower_uni = te_table[:, 5]
+            upper_uni = te_table[:, 6]
             assert np.all(lower_uni <= lower_pw + 1e-10), (
                 "Uniform lower must be <= pointwise lower"
             )
@@ -71,10 +71,10 @@ class TestU2DeltaUniformCI:
         keys = list(self.result.est_lin.keys())
         te_table = self.result.est_lin[keys[0]]
         if te_table.shape[1] >= 7:
-            lower_pw = te_table.iloc[:, 3].values
-            upper_pw = te_table.iloc[:, 4].values
-            lower_uni = te_table.iloc[:, 5].values
-            upper_uni = te_table.iloc[:, 6].values
+            lower_pw = te_table[:, 3]
+            upper_pw = te_table[:, 4]
+            lower_uni = te_table[:, 5]
+            upper_uni = te_table[:, 6]
             pw_width = upper_pw - lower_pw
             uni_width = upper_uni - lower_uni
             assert np.all(uni_width >= pw_width - 1e-10), (

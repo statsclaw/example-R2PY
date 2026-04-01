@@ -20,6 +20,14 @@ from conftest import (
 from interflex import interflex
 
 
+def _get_vcov_array(result):
+    """Extract vcov as numpy array from dict-of-arrays structure."""
+    vcov = result.vcov_matrix
+    if isinstance(vcov, dict):
+        return vcov[list(vcov.keys())[0]]
+    return vcov
+
+
 # ---------------------------------------------------------------------------
 # HIGH priority combinations
 # ---------------------------------------------------------------------------
@@ -215,8 +223,8 @@ class TestPropertyTELinearity:
                            method="linear", vartype="delta")
         keys = list(result.est_lin.keys())
         te_table = result.est_lin[keys[0]]
-        x_vals = te_table.iloc[:, 0].values
-        te_vals = te_table.iloc[:, 1].values
+        x_vals = te_table[:, 0]
+        te_vals = te_table[:, 1]
         coeffs = np.polyfit(x_vals, te_vals, 1)
         te_fitted = np.polyval(coeffs, x_vals)
         ss_res = np.sum((te_vals - te_fitted) ** 2)
@@ -232,7 +240,7 @@ class TestPropertyVcovPSD:
         data = make_discrete_binary(n=500, seed=42)
         result = interflex("linear", data, "Y", "D", "X",
                            method="linear", vartype="delta", vcov_type="robust")
-        vcov = result.vcov_matrix
+        vcov = _get_vcov_array(result)
         eigvals = np.linalg.eigvalsh(vcov)
         assert np.all(eigvals >= -1e-10), (
             f"Vcov not PSD: min eigenvalue = {eigvals.min()}"
@@ -250,9 +258,9 @@ class TestPropertyDeltaCISymmetry:
                            method="linear", vartype="delta")
         keys = list(result.est_lin.keys())
         te_table = result.est_lin[keys[0]]
-        te = te_table.iloc[:, 1].values
-        lower = te_table.iloc[:, 3].values
-        upper = te_table.iloc[:, 4].values
+        te = te_table[:, 1]
+        lower = te_table[:, 3]
+        upper = te_table[:, 4]
         upper_gap = upper - te
         lower_gap = te - lower
         max_asym = np.max(np.abs(upper_gap - lower_gap))

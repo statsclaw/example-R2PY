@@ -12,6 +12,60 @@ from conftest import make_discrete_binary, make_continuous
 from interflex import interflex
 
 
+def _get_ate_value(avg_estimate):
+    """Extract the ATE/AME scalar value from the avg_estimate structure.
+
+    For discrete: avg_estimate is a dict keyed by treatment arm, values are DataFrames
+                  with columns ['ATE', 'sd', 'z-value', 'p-value', 'lower', 'upper'].
+    For continuous: avg_estimate is a dict with keys like 'AME', 'sd', etc.,
+                    each mapping to a DataFrame with a single 'value' column.
+    """
+    keys = list(avg_estimate.keys())
+    first = avg_estimate[keys[0]]
+    if hasattr(first, "columns"):
+        if "ATE" in first.columns:
+            # Discrete: DataFrame with ATE column
+            return float(first["ATE"].iloc[0])
+        elif "value" in first.columns:
+            # Continuous: first key is 'AME', value is DataFrame with 'value'
+            return float(first["value"].iloc[0])
+        else:
+            return float(first.iloc[0, 0])
+    return float(first)
+
+
+def _get_ate_se(avg_estimate):
+    """Extract the ATE/AME SE from the avg_estimate structure."""
+    keys = list(avg_estimate.keys())
+    first = avg_estimate[keys[0]]
+    if hasattr(first, "columns"):
+        if "sd" in first.columns:
+            return float(first["sd"].iloc[0])
+        elif "SE" in first.columns:
+            return float(first["SE"].iloc[0])
+    # Continuous case: 'sd' is a separate key
+    if "sd" in avg_estimate:
+        sd_df = avg_estimate["sd"]
+        if hasattr(sd_df, "iloc"):
+            return float(sd_df.iloc[0, 0])
+    return None
+
+
+def _get_ate_ci(avg_estimate):
+    """Extract CI bounds from the avg_estimate structure."""
+    keys = list(avg_estimate.keys())
+    first = avg_estimate[keys[0]]
+    if hasattr(first, "columns"):
+        if "lower" in first.columns and "upper" in first.columns:
+            return float(first["lower"].iloc[0]), float(first["upper"].iloc[0])
+    # Continuous case: separate keys
+    if "lower" in avg_estimate and "upper" in avg_estimate:
+        lo = avg_estimate["lower"]
+        up = avg_estimate["upper"]
+        return float(lo.iloc[0, 0]), float(up.iloc[0, 0])
+    return None, None
+
+
 # ---------------------------------------------------------------------------
 # Test A1: ATE Discrete Linear
 # ---------------------------------------------------------------------------
@@ -29,20 +83,12 @@ class TestA1ATEDiscreteLinear:
     def test_ate_finite(self):
         """ATE should be finite."""
         assert self.result.avg_estimate is not None
-        keys = list(self.result.avg_estimate.keys())
-        assert len(keys) >= 1
-        ate_info = self.result.avg_estimate[keys[0]]
-        ate_val = ate_info["ATE"] if isinstance(ate_info, dict) else ate_info.iloc[0]
+        ate_val = _get_ate_value(self.result.avg_estimate)
         assert np.isfinite(ate_val), "ATE must be finite"
 
     def test_ate_positive_se(self):
         """ATE SE should be positive."""
-        keys = list(self.result.avg_estimate.keys())
-        ate_info = self.result.avg_estimate[keys[0]]
-        if isinstance(ate_info, dict):
-            se_val = ate_info.get("SE", ate_info.get("se", None))
-        else:
-            se_val = ate_info.iloc[1] if len(ate_info) > 1 else None
+        se_val = _get_ate_se(self.result.avg_estimate)
         if se_val is not None:
             assert se_val > 0, "ATE SE must be positive"
 
@@ -50,10 +96,7 @@ class TestA1ATEDiscreteLinear:
         """ATE should be approximately mean(2 + 1.5*X_i) for D=='1' group."""
         X_treated = self.data.loc[self.data["D"] == "1", "X"].values
         true_ate = np.mean(2 + 1.5 * X_treated)
-        keys = list(self.result.avg_estimate.keys())
-        ate_info = self.result.avg_estimate[keys[0]]
-        ate_val = ate_info["ATE"] if isinstance(ate_info, dict) else ate_info.iloc[0]
-        # Loose tolerance for finite-sample
+        ate_val = _get_ate_value(self.result.avg_estimate)
         assert abs(ate_val - true_ate) < 0.5, (
             f"ATE: expected ~{true_ate:.3f}, got {ate_val:.3f}"
         )
@@ -75,23 +118,14 @@ class TestA2AMEContinuousLinear:
 
     def test_ame_approximately_correct(self):
         """AME should be approximately 0.8 (since E[X] ~ 0 for uniform[-2,2])."""
-        keys = list(self.result.avg_estimate.keys())
-        assert len(keys) >= 1
-        ame_info = self.result.avg_estimate[keys[0]]
-        ame_val = ame_info["ATE"] if isinstance(ame_info, dict) else ame_info.iloc[0]
-        # True AME = mean(0.8 + 0.6*X_i), and E[X]=0, so AME ~ 0.8
+        ame_val = _get_ate_value(self.result.avg_estimate)
         assert abs(ame_val - 0.8) < 0.3, (
             f"AME: expected ~0.8, got {ame_val:.3f}"
         )
 
     def test_ame_se_positive(self):
         """AME SE should be positive."""
-        keys = list(self.result.avg_estimate.keys())
-        ame_info = self.result.avg_estimate[keys[0]]
-        if isinstance(ame_info, dict):
-            se_val = ame_info.get("SE", ame_info.get("se", None))
-        else:
-            se_val = ame_info.iloc[1] if len(ame_info) > 1 else None
+        se_val = _get_ate_se(self.result.avg_estimate)
         if se_val is not None:
             assert se_val > 0, "AME SE must be positive"
 
@@ -112,15 +146,7 @@ class TestA3ATEDeltaSE:
 
     def test_ate_ci_valid(self):
         """ATE CI should be finite and valid (lower < upper)."""
-        keys = list(self.result.avg_estimate.keys())
-        ate_info = self.result.avg_estimate[keys[0]]
-        if isinstance(ate_info, dict):
-            ci_lower = ate_info.get("CI_lower", ate_info.get("ci_lower", None))
-            ci_upper = ate_info.get("CI_upper", ate_info.get("ci_upper", None))
-        else:
-            # Try index-based access
-            ci_lower = ate_info.iloc[3] if len(ate_info) > 3 else None
-            ci_upper = ate_info.iloc[4] if len(ate_info) > 4 else None
+        ci_lower, ci_upper = _get_ate_ci(self.result.avg_estimate)
         if ci_lower is not None and ci_upper is not None:
             assert np.isfinite(ci_lower), "ATE CI lower must be finite"
             assert np.isfinite(ci_upper), "ATE CI upper must be finite"
