@@ -39,14 +39,33 @@ export PYTHONPATH="$PWD:$PYTHONPATH"
 - matplotlib >= 3.7
 - seaborn >= 0.12
 
+## R vs Python Comparison
+
+Both the R and Python versions of `interflex` produce equivalent marginal effect estimates. The plots below use the same DGP (`Y = 1 + 2D + 0.5X + 1.5DX + ε`, n=500, same seed):
+
+| R `interflex` | Python `interflex` |
+|:---:|:---:|
+| ![R](figures/interflex-R.png) | ![Python](figures/interflex-Python.png) |
+
+Both recover the true marginal effect ∂E[Y|D,X]/∂D = 2 + 1.5X with matching point estimates and confidence intervals.
+
 ## Quick Start
+
+### Callable Module Pattern
+
+```python
+import interflex
+
+# The module itself is callable — no need for interflex.interflex()
+result = interflex(data=df, Y="Y", D="D", X="X", estimator="linear")
+```
 
 ### Discrete Treatment (Binary)
 
 ```python
 import numpy as np
 import pandas as pd
-from interflex import interflex
+import interflex
 
 # Generate sample data
 rng = np.random.default_rng(42)
@@ -60,7 +79,7 @@ data = pd.DataFrame({"Y": Y, "D": D, "X": X, "Z1": Z1})
 
 # Estimate interaction effects
 result = interflex(
-    "linear", data, "Y", "D", "X",
+    data=data, Y="Y", D="D", X="X", estimator="linear",
     Z=["Z1"],
     method="linear",
     vartype="delta",
